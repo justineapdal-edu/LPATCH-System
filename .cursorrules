@@ -1,6 +1,6 @@
-@AGENTS.md
+# LPATCH System — Physical Therapy Patient Database & Dashboard
 
-# Project Documentation — READ THIS FIRST
+## Project Documentation — READ THIS FIRST
 
 Before writing ANY code, read these files in order:
 
@@ -11,6 +11,15 @@ Before writing ANY code, read these files in order:
 
 For feature-specific work, use the **Topic Index** in `docs/INDEX.md` to find the exact file and section.
 
+## Stack
+
+- Next.js 16 (App Router)
+- TypeScript 5 (strict mode)
+- Tailwind CSS 4
+- Shadcn UI
+- Prisma (PostgreSQL)
+- Vitest + React Testing Library
+
 ## Key Rules
 
 - TypeScript strict mode — never use `any`
@@ -19,3 +28,4 @@ For feature-specific work, use the **Topic Index** in `docs/INDEX.md` to find th
 - Zod validation on client AND server — never trust client input
 - No patient PII in logs, localStorage, or URL params
 - Use Shadcn UI components + Tailwind theme tokens only
+- Run `npm run lint` and `npx tsc --noEmit` before committing
