@@ -27,6 +27,10 @@ The LPATCH system is a **single-page application** (SPA) built on Next.js App Ro
 
 ```
 lpatch-system/
+├── prisma/
+│   ├── schema.prisma             # Database schema (source of truth)
+│   ├── seed.ts                   # Development seed data
+│   └── migrations/               # Auto-generated migration files
 ├── app/                          # Next.js App Router
 │   ├── layout.tsx                # Root layout (providers, theme, shell)
 │   ├── page.tsx                  # Root redirect to /dashboard
@@ -38,25 +42,37 @@ lpatch-system/
 │   │   ├── loading.tsx           # Suspense fallback
 │   │   ├── [id]/
 │   │   │   ├── page.tsx          # Patient profile (Server Component)
-│   │   │   └── loading.tsx       # Suspense fallback
+│   │   │   ├── loading.tsx       # Suspense fallback
+│   │   │   ├── assessment/
+│   │   │   │   └── page.tsx      # Assessment wizard (Client Component)
+│   │   │   └── sessions/
+│   │   │       └── page.tsx      # Patient sessions (Server Component)
 │   │   └── new/
-│   │       └── page.tsx          # New patient form (Client Component)
+│   │       └── page.tsx          # New patient intake (Client Component)
+│   ├── schedule/
+│   │   ├── page.tsx              # Full clinic calendar (Server Component)
+│   │   └── loading.tsx           # Suspense fallback
 │   └── globals.css               # Tailwind base + CSS variables
 ├── components/
 │   ├── ui/                       # Shadcn UI primitives (Button, Input, Dialog, etc.)
 │   ├── dashboard/                # Dashboard-specific widgets
 │   ├── patients/                 # Patient-specific components
+│   ├── assessments/              # Assessment wizard + step components
+│   ├── schedule/                 # Session scheduler, calendar, preview
 │   └── layout/                   # Shell components (Sidebar, Navbar, etc.)
+├── hooks/                        # Custom React hooks
 ├── lib/
 │   ├── actions/                  # Server Actions (patient CRUD, session management)
-│   ├── db/                       # Database client and queries
+│   ├── db.ts                     # Prisma client singleton
+│   ├── scheduler/                # Session generation logic
 │   ├── validations/              # Zod schemas for all forms
 │   └── utils.ts                  # Shared utility functions (cn, formatDate, etc.)
 ├── types/
-│   ├── patient.ts                # Patient, TherapySession, ProgressNote interfaces
+│   ├── patient.ts                # Patient, Assessment, Therapist interfaces
 │   ├── dashboard.ts              # Dashboard KPI and widget types
 │   └── index.ts                  # Re-exports
 ├── public/                       # Static assets (logos, icons)
+├── .env.example                  # Environment variable template
 └── docs/                         # This documentation
 ```
 
@@ -91,8 +107,8 @@ lpatch-system/
 │           │                       │                             │
 │           ▼                       ▼                             │
 │  ┌──────────────────────────────────────────┐                   │
-│  │           Database Layer (lib/db/)       │                   │
-│  │           Prisma / Drizzle / Raw SQL     │                   │
+│  │           Database Layer (lib/db.ts)     │                   │
+│  │           Prisma Client (PostgreSQL)     │                   │
 │  └──────────────────┬───────────────────────┘                   │
 │                     │                                           │
 └─────────────────────┼───────────────────────────────────────────┘
@@ -112,10 +128,13 @@ lpatch-system/
 
 | Route | Rendering | Rationale |
 |-------|-----------|-----------|
-| `/dashboard` | **Server Component** | KPI data fetched server-side for performance and SEO |
+| `/dashboard` | **Server Component** | KPI data fetched server-side for performance |
 | `/patients` | **Server Component** | Patient list fetched server-side, filtered via URL search params |
 | `/patients/[id]` | **Server Component** | Patient profile data fetched server-side |
-| `/patients/new` | **Client Component** | Form with real-time validation and interactive state |
+| `/patients/[id]/assessment` | **Client Component** | Multi-step wizard with real-time validation and interactive state |
+| `/patients/[id]/sessions` | **Server Component** | Patient session calendar fetched server-side |
+| `/patients/new` | **Client Component** | Multi-step intake form with real-time validation |
+| `/schedule` | **Server Component** | Full clinic calendar fetched server-side |
 
 ### Component Rendering Rules
 - **Default to Server Components** - Only add `'use client'` when the component requires browser APIs, event handlers, or React state/effects.
@@ -158,5 +177,6 @@ lpatch-system/
 | **UI Kit** | Shadcn UI | Accessible, copy-paste components, Tailwind-native |
 | **Language** | TypeScript 5 Strict | Type safety, IDE support, compile-time error detection |
 | **Validation** | Zod | Co-located schemas, runtime + static type inference |
-| **Database** | PostgreSQL (TBD ORM) | Relational data, ACID compliance for patient data |
+| **Database** | PostgreSQL 15+ via Prisma | Relational data, ACID compliance, type-safe queries |
+| **DB Hosting** | Supabase | Managed PostgreSQL, free tier for dev, built-in auth ready for Phase 2 |
 | **State Mgmt** | React Server Components + URL state | Minimize client-side state, use search params for filters |

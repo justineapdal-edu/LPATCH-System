@@ -126,6 +126,7 @@ type PatientStatus = (typeof PatientStatus)[keyof typeof PatientStatus];
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { prisma } from '@/lib/db';
 import { assessmentSchema, type AssessmentInput } from '@/lib/validations/assessment';
 import { generateSessions } from '@/lib/scheduler/generate-sessions';
 
@@ -143,30 +144,67 @@ export async function createAssessment(
     return { success: false, errors };
   }
 
-  // 2. Create patient + assessment
+  // 2. Create patient + assessment in a transaction
   try {
-    const patient = await db.patient.create({ data: parsed.data.patientInformation });
-    const assessment = await db.assessment.create({
-      data: { ...parsed.data, patientId: patient.id },
-    });
+    const result = await prisma.$transaction(async (tx) => {
+      // Resolve therapist by license number
+      const therapist = await tx.therapist.findUnique({
+        where: { licenseNumber: parsed.data.therapistOnDuty.licenseNumber },
+        select: { id: true },
+      });
 
-    // 3. Auto-generate sessions from frequencyDuration
-    const sessions = generateSessions(parsed.data.treatmentPlan.frequencyDuration);
-    await db.therapySession.createMany({
-      data: sessions.map((s) => ({
-        patientId: patient.id,
-        assessmentId: assessment.id,
-        therapistId: parsed.data.therapistOnDuty.name, // Resolve to actual therapist ID
-        scheduledAt: s.scheduledAt,
-        durationMinutes: s.durationMinutes,
-        status: "scheduled" as const,
-        sessionType: "treatment" as const,
-      })),
+      // Create patient (Flow A only — Flow B uses existing patient)
+      const patient = await tx.patient.create({
+        data: {
+          ...parsed.data.patientInformation,
+          status: "pending",
+        },
+      });
+
+      // Count existing assessments for this patient
+      const assessmentCount = await tx.physicalTherapyAssessment.count({
+        where: { patientId: patient.id },
+      });
+
+      // Create assessment (JSONB columns)
+      const assessment = await tx.physicalTherapyAssessment.create({
+        data: {
+          patientId: patient.id,
+          assessmentNumber: assessmentCount + 1,
+          patientInformation: parsed.data.patientInformation,
+          medicalHistory: parsed.data.medicalHistory,
+          physicalExamination: parsed.data.physicalExamination,
+          presentingComplaint: parsed.data.presentingComplaint,
+          functionalAssessment: parsed.data.functionalAssessment,
+          assessmentSummary: parsed.data.assessmentSummary,
+          treatmentPlan: parsed.data.treatmentPlan,
+          therapistNotes: parsed.data.therapistNotes,
+          therapistOnDuty: parsed.data.therapistOnDuty,
+          notes: parsed.data.notes,
+        },
+      });
+
+      // Auto-generate sessions (therapistId = null, unassigned)
+      const sessions = generateSessions(parsed.data.treatmentPlan.frequencyDuration);
+      await tx.therapySession.createMany({
+        data: sessions.map((s) => ({
+          patientId: patient.id,
+          assessmentId: assessment.id,
+          therapistId: null, // Unassigned — therapist assigned later
+          scheduledAt: s.scheduledAt,
+          durationMinutes: s.durationMinutes,
+          sessionNumber: s.sessionNumber,
+          status: "scheduled" as const,
+          sessionType: "treatment" as const,
+        })),
+      });
+
+      return { patientId: patient.id };
     });
 
     revalidatePath('/patients');
     revalidatePath('/dashboard');
-    return { success: true, patientId: patient.id };
+    return { success: true, patientId: result.patientId };
   } catch (error) {
     return { success: false, errors: { form: "Failed to create assessment" } };
   }
@@ -215,7 +253,58 @@ export async function createAssessment(
 
 ---
 
-## 6. Assessment Form Rules
+## 6. Prisma Patterns
+
+### DO's
+- **DO** use the Prisma client singleton from `lib/db.ts` — never instantiate `new PrismaClient()` directly
+- **DO** use `$transaction` for multi-table operations (assessment + sessions)
+- **DO** use `select` to avoid over-fetching large JSONB columns
+- **DO** use `findUnique` with `where: { licenseNumber }` to resolve therapist by license
+- **DO** use `createMany` for bulk session creation (more efficient than loop)
+- **DO** use `@default(uuid())` for all primary keys (already in schema)
+- **DO** run `npx prisma generate` after any schema change
+
+### DON'Ts
+- **DON'T** use `$queryRaw` unless Prisma's query builder cannot express the logic
+- **DON'T** use `updateMany` without a `where` clause
+- **DON'T** hardcode UUIDs in seed data — use dynamic generation
+- **DON'T** modify migration files after they've been applied
+- **DON'T** store base64 signature data outside of JSONB columns
+
+### Pattern: Prisma Client Singleton
+
+```typescript
+// lib/db.ts
+import { PrismaClient } from "@prisma/client";
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}
+```
+
+### Pattern: Therapist Resolution by License
+
+```typescript
+// Resolve therapist from assessment signature block
+const therapist = await prisma.therapist.findUnique({
+  where: { licenseNumber: assessmentData.therapistOnDuty.licenseNumber },
+  select: { id: true, fullName: true },
+});
+
+if (!therapist) {
+  return { success: false, errors: { "therapistOnDuty.licenseNumber": "Therapist not found" } };
+}
+```
+
+---
+
+## 7. Assessment Form Rules
 
 ### DO's
 - **DO** validate each wizard step before allowing "Next" navigation
@@ -333,3 +422,96 @@ export function AssessmentForm() {
 - **DON'T** create overlapping sessions (check existing sessions in DB)
 - **DON'T** auto-generate sessions if any `frequencyDuration` field is invalid
 - **DON'T** modify existing sessions when the assessment is re-edited (manual override only)
+
+---
+
+## 11. Testing
+
+### Framework
+- **Unit tests**: Vitest
+- **Component tests**: React Testing Library + Vitest
+- **Test location**: `__tests__/` directories co-located with source files
+
+### Conventions
+
+```
+lib/
+  scheduler/
+    generate-sessions.ts
+    __tests__/
+      generate-sessions.test.ts     # Unit tests for session generation logic
+
+components/
+  assessments/
+    assessment-wizard.tsx
+    __tests__/
+      assessment-wizard.test.tsx    # Component tests for wizard interaction
+
+lib/
+  validations/
+    assessment.ts
+    __tests__/
+      assessment.test.ts            # Zod schema validation tests
+```
+
+### DO's
+- **DO** test Zod schemas with valid and invalid inputs
+- **DO** test `generateSessions()` with all frequency options
+- **DO** test session conflict detection logic
+- **DO** test patient status transition rules (valid and invalid transitions)
+- **DO** test component rendering with RTL (`render`, `screen`, `fireEvent`)
+- **DO** mock Prisma client in unit tests (use `vi.mock`)
+
+### DON'Ts
+- **DON'T** test implementation details (test behavior, not internal state)
+- **DON'T** write snapshot tests for components (they break on every style change)
+- **DON'T** make API calls in unit tests (mock Prisma)
+- **DON'T** test Shadcn UI components (they're already tested upstream)
+
+### Test File Pattern
+
+```typescript
+// lib/scheduler/__tests__/generate-sessions.test.ts
+import { describe, it, expect } from "vitest";
+import { generateSessions } from "../generate-sessions";
+import type { FrequencyDuration } from "@/types/patient";
+
+describe("generateSessions", () => {
+  const baseInput: FrequencyDuration = {
+    frequency: "3x/week",
+    durationMinutes: 45,
+    totalWeeks: 2,
+    preferredTimeOfDay: "morning",
+    startDate: "2026-01-15",
+  };
+
+  it("generates correct number of sessions for 3x/week × 2 weeks", () => {
+    const sessions = generateSessions(baseInput);
+    expect(sessions).toHaveLength(6);
+  });
+
+  it("generates sessions with correct duration", () => {
+    const sessions = generateSessions(baseInput);
+    expect(sessions[0]?.durationMinutes).toBe(45);
+  });
+
+  it("generates sessions in correct date order", () => {
+    const sessions = generateSessions(baseInput);
+    const dates = sessions.map((s) => s.scheduledAt.getTime());
+    expect(dates).toEqual([...dates].sort((a, b) => a - b));
+  });
+
+  it("assigns sequential session numbers", () => {
+    const sessions = generateSessions(baseInput);
+    const numbers = sessions.map((s) => s.sessionNumber);
+    expect(numbers).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+});
+```
+
+### Commands
+```bash
+npm run test          # Run all tests
+npm run test:watch    # Watch mode
+npm run test:coverage # Coverage report
+```

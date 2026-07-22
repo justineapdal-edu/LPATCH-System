@@ -110,7 +110,7 @@ interface ScheduleEntry {
   scheduledAt: string;         // ISO 8601 datetime
   durationMinutes: number;
   status: "scheduled" | "completed" | "cancelled" | "no_show";
-  therapistName: string;
+  therapistName: string | null;  // NULLABLE — "Unassigned" when null
   sessionNumber: number;       // e.g., 5 (current) of 24 (total)
   totalSessions: number;       // From FrequencyDuration.totalWeeks * frequency
   assessmentId: string;        // FK -> assessment (links back to treatment plan)
@@ -120,6 +120,7 @@ interface ScheduleEntry {
 ### Behavior
 - Shows only today's sessions for the current therapist (or all if admin)
 - Color-coded status indicators: green (done), blue (active), gray (upcoming), red (cancelled)
+- **Unassigned sessions**: display "Unassigned" in muted text with gray background
 - Displays session progress: "Session #5/24" (derived from treatment plan frequency)
 - Click entry → navigate to `/patients/[patientId]`
 - Auto-refreshes every 5 minutes (Server Component re-render)
@@ -192,9 +193,11 @@ interface ActivityItem {
 |---------------|---------------------|
 | `session_completed` | "Session completed for {patientName}" |
 | `session_scheduled` | "{count} sessions generated for {patientName} ({frequency}, {duration}min)" |
+| `session_assigned` | "Therapist {therapistName} assigned to {patientName}'s sessions" |
 | `progress_note_added` | "Progress note added for {patientName}" |
 | `assessment_completed` | "Assessment completed for {patientName}" |
 | `patient_onboarded` | "New patient onboarded: {patientName}" |
+| `patient_status_changed` | "Patient {patientName} status changed to {newStatus}" |
 | `treatment_plan_updated` | "Treatment plan updated for {patientName}" |
 
 ### Behavior
@@ -212,6 +215,7 @@ interface ActivityItem {
 | New Patient | `+ New Patient` | `/patients/new` | Admin only |
 | New Assessment | `New Assessment` | `/patients/[id]/assessment` | Therapist / Admin |
 | Add Progress Note | `Add Progress Note` | Modal dialog | Therapist only |
+| Assign Therapist | `Assign Therapist` | Modal dialog (select therapist) | Admin only |
 | Run Report | `Run Report` | `/reports` (Phase 2) | Admin only |
 
 ---
@@ -301,6 +305,12 @@ revalidatePath() triggers re-render
 | `cancelled` | Patient/therapist cancelled | Red, strikethrough |
 | `no_show` | Patient did not attend | Red, outlined |
 
+### Session Assignment
+After auto-generation, sessions are created WITHOUT a therapist (`therapistId = null`).
+- **Unassigned sessions** display "Unassigned" in muted text on the schedule
+- Admin can assign a therapist via the "Assign Therapist" modal
+- Once assigned, conflict detection is enforced for that therapist
+
 ### Manual Session Overrides
 After auto-generation, therapists can:
 - **Reschedule** a session (drag on calendar or edit in modal)
@@ -321,6 +331,7 @@ After auto-generation, therapists can:
 - **DO** show session count progress (e.g., "5/24") in schedule entries
 - **DO** link calendar sessions back to the originating assessment
 - **DO** auto-refresh calendar when sessions are rescheduled or cancelled
+- **DO** display "Unassigned" for sessions with null therapistId
 
 ### DON'Ts
 - **DON'T** fetch dashboard data with `useEffect` in Client Components
@@ -328,5 +339,6 @@ After auto-generation, therapists can:
 - **DON'T** show patient PII in activity feed beyond first name + last initial
 - **DON'T** auto-refresh the entire page (use targeted revalidation)
 - **DON'T** display counts as exact numbers when > 999 (use "1.2k" format)
-- **DON'T** show past sessions as "upcoming" (timezone edge case — always compare with server time)
+- **DON'T** show past sessions as "upcoming" (timezone edge case — compare with server time)
 - **DON'T** allow calendar drag-reschedule without confirming new time with therapist
+- **DON'T** require therapist assignment for sessions to appear on calendar

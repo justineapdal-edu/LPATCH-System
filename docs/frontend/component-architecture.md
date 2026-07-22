@@ -195,9 +195,10 @@ AssessmentWizard (Client Component — manages step state)
 │   ├── Textarea × 2
 │   ├── DatePicker (follow-up)
 │   └── TherapistSignatureBlock
-│       ├── TextField (name)
-│       ├── TextField (license #)
-│       └── DatePicker (date)
+│       ├── TextField (name — auto-fill from logged-in therapist, Phase 2)
+│       ├── TextField (license # — validated against Therapist table)
+│       ├── DatePicker (date)
+│       └── SignaturePad (canvas drawing, 300x150px, base64 PNG output)
 └── StepNavigation (Client Component — Previous/Next/Submit)
 ```
 
@@ -297,9 +298,11 @@ interface SessionSchedulerProps {
   value: FrequencyDuration;
   onChange: (value: FrequencyDuration) => void;
   errors?: Record<string, string>;
+  /** null = unassigned (default for new assessments) */
+  assignedTherapistId?: string | null;
 }
 
-export function SessionScheduler({ value, onChange, errors }: SessionSchedulerProps) {
+export function SessionScheduler({ value, onChange, errors, assignedTherapistId }: SessionSchedulerProps) {
   const preview = useMemo(() => generateSessions(value), [value]);
 
   return (
@@ -335,7 +338,10 @@ export function SessionScheduler({ value, onChange, errors }: SessionSchedulerPr
         error={errors?.["frequencyDuration.startDate"]}
       />
 
-      <SessionPreview sessions={preview} />
+      <SessionPreview
+        sessions={preview}
+        assignedTherapistId={assignedTherapistId}
+      />
     </div>
   );
 }
@@ -348,9 +354,10 @@ export function SessionScheduler({ value, onChange, errors }: SessionSchedulerPr
 
 interface SessionPreviewProps {
   sessions: Array<{ scheduledAt: Date; durationMinutes: number; sessionNumber: number }>;
+  assignedTherapistId?: string | null;
 }
 
-export function SessionPreview({ sessions }: SessionPreviewProps) {
+export function SessionPreview({ sessions, assignedTherapistId }: SessionPreviewProps) {
   const totalMinutes = sessions.length * (sessions[0]?.durationMinutes ?? 0);
   const totalHours = Math.floor(totalMinutes / 60);
   const remainingMin = totalMinutes % 60;
@@ -368,6 +375,9 @@ export function SessionPreview({ sessions }: SessionPreviewProps) {
     <div className="rounded-md bg-muted p-3 text-sm">
       <p className="font-medium">
         PREVIEW: {sessions.length} sessions scheduled
+      </p>
+      <p className="text-muted-foreground">
+        Therapist: {assignedTherapistId ? "Assigned" : "Unassigned (assign later)"}
       </p>
       <div className="mt-2 max-h-40 overflow-y-auto">
         {Array.from(weekMap.entries()).map(([week, weekSessions]) => (
@@ -415,6 +425,11 @@ npx shadcn@latest add slider
 npx shadcn@latest add calendar
 npx shadcn@latest add popover
 npx shadcn@latest add textarea
+```
+
+### Additional NPM Packages
+```bash
+npm install signature_pad    # Canvas-based signature capture
 ```
 
 ### Tailwind Rules
