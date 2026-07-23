@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Therapist ───────────────────────────────────────────────────
+
+model Therapist {
+  id             String   @id @default(uuid())
+  fullName       String
+  licenseNumber  String   @unique
+  email          String?  @unique
+  phone          String?
+  specialization String?
+  status         String   @default("active")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  sessions      TherapySession[]
+  progressNotes ProgressNote[]
+
+  @@index([fullName])
+}
+
+// ── Patient ─────────────────────────────────────────────────────
+
+model Patient {
+  id                    String   @id @default(uuid())
+  fullName              String
+  address               String
+  dateOfBirth           DateTime
+  gender                String
+  contactNumber         String
+  email                 String?
+  occupation            String?
+  hobbies               String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  insuranceProvider     String?
+  insurancePolicyNumber String?
+  status                String   @default("pending")
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  assessments   PhysicalTherapyAssessment[]
+  sessions      TherapySession[]
+  progressNotes ProgressNote[]
+
+  @@index([fullName])
+  @@index([status])
+  @@index([contactNumber])
+}
+
+// ── Physical Therapy Assessment ─────────────────────────────────
+
+model PhysicalTherapyAssessment {
+  id               String @id @default(uuid())
+  patientId        String
+  assessmentNumber Int    @default(1)
+
+  patientInformation  Json
+  medicalHistory      Json
+  physicalExamination Json
+  presentingComplaint Json
+  functionalAssessment Json
+  assessmentSummary   Json
+  treatmentPlan       Json
+  therapistNotes      Json
+  therapistOnDuty     Json
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patient  Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  sessions TherapySession[]
+
+  @@index([patientId])
+  @@index([patientId, assessmentNumber])
+  @@index([createdAt])
+}
+
+// ── Therapy Session ─────────────────────────────────────────────
+
+model TherapySession {
+  id              String   @id @default(uuid())
+  patientId       String
+  assessmentId    String
+  therapistId     String?
+  scheduledAt     DateTime
+  durationMinutes Int
+  status          String   @default("scheduled")
+  sessionType     String   @default("treatment")
+  sessionNumber   Int
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  patient      Patient                      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  assessment   PhysicalTherapyAssessment    @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  therapist    Therapist?                   @relation(fields: [therapistId], references: [id], onDelete: SetNull)
+  progressNote ProgressNote?
+
+  @@index([patientId])
+  @@index([therapistId])
+  @@index([assessmentId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([therapistId, scheduledAt])
+}
+
+// ── Progress Note ───────────────────────────────────────────────
+
+model ProgressNote {
+  id                String   @id @default(uuid())
+  sessionId         String   @unique
+  patientId         String
+  therapistId       String
+  content           String
+  painLevel         Int
+  rangeOfMotion     String?
+  functionalOutcome String?
+  createdAt         DateTime @default(now())
+
+  session   TherapySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  patient   Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  therapist Therapist      @relation(fields: [therapistId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([therapistId])
+  @@index([createdAt])
+}
