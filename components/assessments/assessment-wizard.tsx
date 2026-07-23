@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { page1Schema, page2Schema, assessmentSchema } from "@/lib/validations/assessment";
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import {
   createNewPatientAssessment,
   createReAssessment,
@@ -239,13 +240,16 @@ export function AssessmentWizard({
       <div className="flex flex-wrap gap-2">
         {stepLabels.map((label, i) => {
           const stepNum = i + 1;
+          const isComplete = stepNum < currentStep;
+          const isCurrent = stepNum === currentStep;
           return (
             <Badge
               key={stepNum}
-              variant={stepNum === currentStep ? "default" : stepNum < currentStep ? "secondary" : "outline"}
-              className="cursor-pointer"
-              onClick={() => stepNum < currentStep && setCurrentStep(stepNum)}
+              variant={isCurrent ? "default" : isComplete ? "secondary" : "outline"}
+              className={`cursor-pointer gap-1 ${isComplete ? "opacity-75" : ""}`}
+              onClick={() => isComplete && setCurrentStep(stepNum)}
             >
+              {isComplete && <CheckCircle2 className="h-3 w-3" />}
               {stepNum}. {label}
             </Badge>
           );
@@ -253,7 +257,7 @@ export function AssessmentWizard({
       </div>
 
       {/* Step content */}
-      <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+      <div className="rounded-xl border bg-card p-6 text-card-foreground shadow-sm">
         {currentStep === 1 && (
           <PatientInfoStep
             data={formData.patientInformation}
@@ -319,7 +323,8 @@ export function AssessmentWizard({
 
       {/* Error display */}
       {state?.success === false && "errors" in state && state.errors?.form && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
           {state.errors.form}
         </div>
       )}
@@ -331,22 +336,31 @@ export function AssessmentWizard({
           variant="outline"
           onClick={handlePrevious}
           disabled={currentStep === 1}
+          className="gap-1.5"
         >
-          ← Previous
+          <ArrowLeft className="h-4 w-4" />
+          Previous
         </Button>
         <span className="text-sm text-muted-foreground">
           Step {currentStep} of {TOTAL_STEPS}
         </span>
         {currentStep < TOTAL_STEPS ? (
-          <Button type="button" onClick={handleNext}>
-            Next →
+          <Button type="button" onClick={handleNext} className="gap-1.5">
+            Next
+            <ArrowRight className="h-4 w-4" />
           </Button>
         ) : (
           <Button
             type="button"
             onClick={handleSubmit}
             disabled={isPending}
+            className="gap-1.5"
           >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
             {isPending ? "Submitting..." : "Submit Assessment"}
           </Button>
         )}

@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Plus, Calendar, Clock, User, ClipboardList } from "lucide-react";
 
 interface PatientProfilePageProps {
   params: Promise<{ id: string }>;
@@ -89,10 +90,11 @@ export default async function PatientProfilePage({
 
         <TabsContent value="assessments">
           <div className="space-y-4">
-            <div className="flex justify-between">
+            <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Assessments</h2>
               <Link href={`/patients/${id}/assessment`}>
-                <Button variant="outline" size="sm">
+                <Button size="sm" className="gap-1.5">
+                  <Plus className="h-4 w-4" />
                   New Assessment
                 </Button>
               </Link>
@@ -102,8 +104,11 @@ export default async function PatientProfilePage({
         </TabsContent>
 
         <TabsContent value="sessions">
-          <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold">Sessions</h2>
+          <div className="rounded-xl border bg-card p-5 text-card-foreground shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <ClipboardList className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Sessions</h2>
+            </div>
             {sessions.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No sessions scheduled yet.
@@ -113,21 +118,33 @@ export default async function PatientProfilePage({
                 {sessions.map((s: (typeof sessions)[number]) => (
                   <div
                     key={s.id}
-                    className="flex items-center justify-between rounded-md border p-3"
+                    className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent"
                   >
-                    <div>
-                      <p className="text-sm font-medium">
-                        Session #{s.sessionNumber}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(s.scheduledAt).toLocaleString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}{" "}
-                        · {s.durationMinutes} min · {s.therapist?.fullName ?? "Unassigned"}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">
+                          Session #{s.sessionNumber}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            {new Date(s.scheduledAt).toLocaleString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                          <span>·</span>
+                          <span>{s.durationMinutes} min</span>
+                          <span>·</span>
+                          <User className="h-3 w-3" />
+                          <span>{s.therapist?.fullName ?? "Unassigned"}</span>
+                        </div>
+                      </div>
                     </div>
                     <Badge variant={s.status === "completed" ? "default" : "outline"}>
                       {s.status}

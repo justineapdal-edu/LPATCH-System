@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { SessionPreview } from "./session-preview";
 import { generateSessions } from "@/lib/scheduler/generate-sessions";
+import { Calendar, Repeat, Clock, Timer, Hash } from "lucide-react";
 import type {
   FrequencyDuration,
   SessionFrequency,
@@ -34,12 +35,20 @@ export function SessionScheduler({
   const preview = useMemo(() => generateSessions(value), [value]);
 
   return (
-    <div className="space-y-4 rounded-lg border p-4">
-      <h3 className="text-lg font-semibold">Session Schedule</h3>
+    <div className="space-y-4 rounded-xl border p-5">
+      <div className="flex items-center gap-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Repeat className="h-4 w-4" />
+        </div>
+        <h3 className="text-lg font-semibold">Session Schedule</h3>
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Frequency</Label>
+          <Label className="flex items-center gap-1.5 text-xs font-medium">
+            <Repeat className="h-3 w-3" />
+            Frequency
+          </Label>
           <Select
             value={value.frequency}
             onValueChange={(v) => {
@@ -65,7 +74,10 @@ export function SessionScheduler({
         </div>
 
         <div className="space-y-2">
-          <Label>Duration (min)</Label>
+          <Label className="flex items-center gap-1.5 text-xs font-medium">
+            <Timer className="h-3 w-3" />
+            Duration (min)
+          </Label>
           <Select
             value={String(value.durationMinutes)}
             onValueChange={(v) => {
@@ -90,7 +102,10 @@ export function SessionScheduler({
         </div>
 
         <div className="space-y-2">
-          <Label>Total Weeks</Label>
+          <Label className="flex items-center gap-1.5 text-xs font-medium">
+            <Hash className="h-3 w-3" />
+            Total Weeks
+          </Label>
           <Input
             type="number"
             min={1}
@@ -111,7 +126,10 @@ export function SessionScheduler({
         </div>
 
         <div className="space-y-2">
-          <Label>Time of Day</Label>
+          <Label className="flex items-center gap-1.5 text-xs font-medium">
+            <Clock className="h-3 w-3" />
+            Time of Day
+          </Label>
           <Select
             value={value.preferredTimeOfDay}
             onValueChange={(v) => {
@@ -142,7 +160,10 @@ export function SessionScheduler({
       </div>
 
       <div className="space-y-2">
-        <Label>Start Date</Label>
+        <Label className="flex items-center gap-1.5 text-xs font-medium">
+          <Calendar className="h-3 w-3" />
+          Start Date
+        </Label>
         <Input
           type="date"
           value={value.startDate}

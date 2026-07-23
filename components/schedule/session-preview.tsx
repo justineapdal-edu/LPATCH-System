@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { generateSessions } from "@/lib/scheduler/generate-sessions";
+import { Badge } from "@/components/ui/badge";
+import { CalendarCheck, User, Clock, Calculator } from "lucide-react";
 import type { FrequencyDuration } from "@/types/patient";
 
 interface SessionPreviewProps {
@@ -49,41 +51,53 @@ export function SessionPreview({
 
   if (sessions.length === 0) {
     return (
-      <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+      <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
         No sessions to preview.
       </div>
     );
   }
 
   return (
-    <div className="rounded-md bg-muted p-3 text-sm">
-      <p className="font-medium">
-        PREVIEW: {sessions.length} sessions scheduled
-      </p>
-      <p className="text-muted-foreground">
-        Therapist:{" "}
-        {assignedTherapistId ? "Assigned" : "Unassigned (assign later)"}
-      </p>
-      <div className="mt-2 max-h-40 overflow-y-auto">
+    <div className="rounded-lg bg-muted/50 p-4 text-sm space-y-3">
+      <div className="flex items-center gap-2 font-medium">
+        <CalendarCheck className="h-4 w-4 text-primary" />
+        <span>{sessions.length} sessions scheduled</span>
+      </div>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <User className="h-3.5 w-3.5" />
+        <span>
+          Therapist: {assignedTherapistId ? (
+            <Badge variant="outline" className="ml-1 text-xs">Assigned</Badge>
+          ) : (
+            "Unassigned (assign later)"
+          )}
+        </span>
+      </div>
+      <div className="max-h-40 overflow-y-auto space-y-1.5">
         {Array.from(weekMap.entries()).map(([week, weekSessions]) => (
-          <div key={week}>
-            Week {week}:{" "}
-            {weekSessions
-              .map((s) =>
-                new Date(s.scheduledAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  weekday: "short",
-                })
-              )
-              .join(" · ")}
+          <div key={week} className="flex items-start gap-2">
+            <Badge variant="secondary" className="shrink-0 text-xs">W{week}</Badge>
+            <span className="text-xs text-muted-foreground">
+              {weekSessions
+                .map((s) =>
+                  new Date(s.scheduledAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    weekday: "short",
+                  })
+                )
+                .join(" · ")}
+            </span>
           </div>
         ))}
       </div>
-      <p className="mt-2 text-muted-foreground">
-        Total: {sessions.length} sessions × {sessions[0]?.durationMinutes} min
-        = {totalHours}h {remainingMin}m
-      </p>
+      <div className="flex items-center gap-2 border-t pt-2 text-muted-foreground">
+        <Calculator className="h-3.5 w-3.5" />
+        <span>
+          Total: {sessions.length} sessions × {sessions[0]?.durationMinutes} min
+          = {totalHours}h {remainingMin}m
+        </span>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,15 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import {
+  User,
+  Phone,
+  Mail,
+  Calendar,
+  Briefcase,
+  Shield,
+  Plus,
+} from "lucide-react";
 
 interface PatientHeaderProps {
   patient: {
@@ -37,32 +46,65 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 
 export function PatientHeader({ patient }: PatientHeaderProps) {
   return (
-    <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+    <div className="rounded-xl border bg-card p-6 text-card-foreground shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{patient.fullName}</h1>
-            <Badge variant={statusVariant(patient.status)}>
-              {patient.status}
-            </Badge>
+        <div className="flex items-start gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <User className="h-7 w-7" />
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-sm text-muted-foreground md:grid-cols-4">
-            <span>Gender: {patient.gender}</span>
-            <span>Contact: {patient.contactNumber}</span>
-            {patient.email && <span>Email: {patient.email}</span>}
-            <span>DOB: {new Date(patient.dateOfBirth).toLocaleDateString("en-US")}</span>
-            {patient.occupation && <span>Occupation: {patient.occupation}</span>}
-            {patient.emergencyContactName && (
-              <span>Emergency: {patient.emergencyContactName} ({patient.emergencyContactPhone})</span>
-            )}
-            {patient.insuranceProvider && (
-              <span>Insurance: {patient.insuranceProvider} {patient.insurancePolicyNumber}</span>
-            )}
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight">{patient.fullName}</h1>
+              <Badge variant={statusVariant(patient.status)}>
+                {patient.status}
+              </Badge>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" />
+                {patient.gender}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" />
+                {patient.contactNumber}
+              </span>
+              {patient.email && (
+                <span className="flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5" />
+                  {patient.email}
+                </span>
+              )}
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                {new Date(patient.dateOfBirth).toLocaleDateString("en-US")}
+              </span>
+              {patient.occupation && (
+                <span className="flex items-center gap-1.5">
+                  <Briefcase className="h-3.5 w-3.5" />
+                  {patient.occupation}
+                </span>
+              )}
+              {patient.emergencyContactName && (
+                <span className="flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5" />
+                  Emergency: {patient.emergencyContactName} ({patient.emergencyContactPhone})
+                </span>
+              )}
+              {patient.insuranceProvider && (
+                <span className="flex items-center gap-1.5">
+                  <Shield className="h-3.5 w-3.5" />
+                  {patient.insuranceProvider} {patient.insurancePolicyNumber}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex gap-2">
           <Link href={`/patients/${patient.id}/assessment`}>
-            <Button variant="outline" size="sm">New Assessment</Button>
+            <Button size="sm" className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              New Assessment
+            </Button>
           </Link>
         </div>
       </div>

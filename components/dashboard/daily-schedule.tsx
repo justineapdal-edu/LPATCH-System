@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Clock, User, Dumbbell, CheckCircle2, XCircle, AlertCircle, Ban } from "lucide-react";
 
 interface ScheduleEntry {
   id: string;
@@ -25,25 +26,25 @@ function formatTime(iso: string): string {
   });
 }
 
-function statusColor(status: string): string {
+function statusConfig(status: string) {
   switch (status) {
     case "completed":
-      return "bg-emerald-100 text-emerald-800";
+      return { className: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 };
     case "scheduled":
-      return "bg-blue-100 text-blue-800";
+      return { className: "bg-blue-50 text-blue-700 border-blue-200", icon: Clock };
     case "cancelled":
-      return "bg-red-100 text-red-800";
+      return { className: "bg-red-50 text-red-700 border-red-200", icon: XCircle };
     case "no_show":
-      return "bg-amber-100 text-amber-800";
+      return { className: "bg-amber-50 text-amber-700 border-amber-200", icon: AlertCircle };
     default:
-      return "bg-gray-100 text-gray-800";
+      return { className: "bg-gray-50 text-gray-700 border-gray-200", icon: Ban };
   }
 }
 
 export function DailySchedule({ entries }: DailyScheduleProps) {
   if (entries.length === 0) {
     return (
-      <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+      <div className="rounded-xl border bg-card p-6 text-card-foreground shadow-sm">
         <h3 className="text-lg font-semibold">Today&apos;s Schedule</h3>
         <p className="mt-4 text-center text-sm text-muted-foreground">
           No sessions scheduled for today.
@@ -53,33 +54,45 @@ export function DailySchedule({ entries }: DailyScheduleProps) {
   }
 
   return (
-    <div className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm">
+    <div className="rounded-xl border bg-card p-5 text-card-foreground shadow-sm">
       <h3 className="mb-4 text-lg font-semibold">Today&apos;s Schedule</h3>
-      <div className="space-y-3">
-        {entries.map((entry) => (
-          <Link
-            key={entry.id}
-            href={`/patients/${entry.patientId}`}
-            className="flex items-center gap-4 rounded-md border p-3 transition-colors hover:bg-muted"
-          >
-            <div className="w-16 text-sm font-medium">
-              {formatTime(entry.scheduledAt)}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium">{entry.patientName}</p>
-              <p className="text-xs text-muted-foreground">
-                {entry.sessionType} · {entry.durationMinutes} min · Session #
-                {entry.sessionNumber}
-              </p>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {entry.therapistName ?? "Unassigned"}
-            </div>
-            <Badge className={statusColor(entry.status)} variant="secondary">
-              {entry.status}
-            </Badge>
-          </Link>
-        ))}
+      <div className="space-y-2">
+        {entries.map((entry) => {
+          const { className: statusClassName, icon: StatusIcon } = statusConfig(entry.status);
+          return (
+            <Link
+              key={entry.id}
+              href={`/patients/${entry.patientId}`}
+              className="flex items-center gap-4 rounded-lg border p-3 transition-all duration-200 hover:bg-accent hover:shadow-sm"
+            >
+              <div className="flex items-center gap-2 w-20">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-sm font-medium tabular-nums">
+                  {formatTime(entry.scheduledAt)}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{entry.patientName}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Dumbbell className="h-3 w-3" />
+                  <span>{entry.sessionType}</span>
+                  <span className="text-border">·</span>
+                  <span>{entry.durationMinutes} min</span>
+                  <span className="text-border">·</span>
+                  <span>#{entry.sessionNumber}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <User className="h-3 w-3" />
+                <span className="hidden sm:inline">{entry.therapistName ?? "Unassigned"}</span>
+              </div>
+              <Badge className={statusClassName} variant="outline">
+                <StatusIcon className="mr-1 h-3 w-3" />
+                {entry.status}
+              </Badge>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

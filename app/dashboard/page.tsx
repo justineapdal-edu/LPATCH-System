@@ -4,6 +4,15 @@ import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { getDashboardKpis, getRecentActivity } from "@/lib/actions/get-dashboard-data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import {
+  Users,
+  CalendarCheck,
+  Clock,
+  TrendingUp,
+  Plus,
+  List,
+  Calendar,
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +24,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -23,25 +34,25 @@ export default async function DashboardPage() {
           title="Active Patients"
           value={kpis.activePatients}
           subtitle="Currently in treatment"
-          icon="👥"
+          icon={Users}
         />
         <KpiCard
           title="Sessions Today"
           value={kpis.todaySessions}
           subtitle={`${kpis.completedToday} done / ${kpis.upcomingToday} upcoming`}
-          icon="📅"
+          icon={CalendarCheck}
         />
         <KpiCard
           title="Pending Sessions"
           value={kpis.pendingSessions}
           subtitle="Scheduled across all patients"
-          icon="⏳"
+          icon={Clock}
         />
         <KpiCard
           title="Patient Retention"
           value={`${kpis.retention}%`}
           subtitle="Active vs total patients"
-          icon="📈"
+          icon={TrendingUp}
         />
       </div>
 
@@ -58,13 +69,22 @@ export default async function DashboardPage() {
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
         <Link href="/patients/new">
-          <Button>+ New Patient</Button>
+          <Button className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            New Patient
+          </Button>
         </Link>
         <Link href="/patients">
-          <Button variant="outline">View All Patients</Button>
+          <Button variant="outline" className="gap-1.5">
+            <List className="h-4 w-4" />
+            View All Patients
+          </Button>
         </Link>
         <Link href="/schedule">
-          <Button variant="outline">Full Calendar</Button>
+          <Button variant="outline" className="gap-1.5">
+            <Calendar className="h-4 w-4" />
+            Full Calendar
+          </Button>
         </Link>
       </div>
     </div>

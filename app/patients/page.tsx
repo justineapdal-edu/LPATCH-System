@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { PatientTable } from "@/components/patients/patient-table";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Plus, Search } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -53,9 +54,15 @@ export default async function PatientsPage({ searchParams }: PatientsPageProps) 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Patients</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Patients</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">{total} total patients</p>
+        </div>
         <Link href="/patients/new">
-          <Button>+ New Patient</Button>
+          <Button className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            New Patient
+          </Button>
         </Link>
       </div>
 

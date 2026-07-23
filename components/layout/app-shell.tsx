@@ -5,11 +5,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  Menu,
+  Activity,
+  LogOut,
+} from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: "📊" },
-  { href: "/patients", label: "Patients", icon: "👥" },
-  { href: "/schedule", label: "Schedule", icon: "📅" },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/patients", label: "Patients", icon: Users },
+  { href: "/schedule", label: "Schedule", icon: Calendar },
 ] as const;
 
 interface SidebarProps {
@@ -25,37 +33,47 @@ function SidebarNav({
   const pathname = usePathname();
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex h-14 items-center border-b px-4">
-        <Link
-          href="/dashboard"
-          className="text-lg font-semibold"
-          onClick={onLinkClick}
-        >
-          LPATCH
-        </Link>
+    <div className="flex h-full flex-col bg-card">
+      <div className="flex h-16 items-center gap-2.5 border-b px-5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+          <Activity className="h-4 w-4 text-primary-foreground" />
+        </div>
+        <span className="text-lg font-bold tracking-tight">LPATCH</span>
       </div>
-      <nav className="flex-1 space-y-1 p-2">
+      <nav className="flex-1 space-y-1 p-3">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
+          const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={onLinkClick}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
-              <span>{item.icon}</span>
+              <Icon className="h-4 w-4" />
               {item.label}
             </Link>
           );
         })}
       </nav>
+      <div className="border-t p-3">
+        <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium">
+            A
+          </div>
+          <div className="flex-1">
+            <p className="font-medium text-foreground">Admin</p>
+            <p className="text-xs">Therapist</p>
+          </div>
+          <LogOut className="h-4 w-4" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -79,29 +97,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 items-center gap-4 border-b px-4 lg:px-6">
+        <header className="flex h-16 items-center gap-4 border-b bg-card/80 backdrop-blur-sm px-4 lg:px-6">
           <button
             type="button"
-            className="lg:hidden"
+            className="rounded-lg p-2 text-muted-foreground hover:bg-muted lg:hidden"
             onClick={() => setSidebarOpen(true)}
           >
             <span className="sr-only">Open menu</span>
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-              />
-            </svg>
+            <Menu className="h-5 w-5" />
           </button>
           <div className="flex-1" />
-          <div className="text-sm text-muted-foreground">Admin</div>
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+              A
+            </div>
+          </div>
         </header>
         <main className="flex-1 overflow-auto p-4 lg:p-6">{children}</main>
       </div>

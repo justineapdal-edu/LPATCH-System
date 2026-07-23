@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Eye, User, Users } from "lucide-react";
 
 interface PatientRow {
   id: string;
@@ -39,14 +40,18 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 export function PatientTable({ patients }: PatientTableProps) {
   if (patients.length === 0) {
     return (
-      <div className="rounded-lg border bg-card p-8 text-center text-card-foreground shadow-sm">
-        <p className="text-muted-foreground">No patients found.</p>
+      <div className="rounded-xl border bg-card p-12 text-center text-card-foreground shadow-sm">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+          <Users className="h-6 w-6 text-muted-foreground" />
+        </div>
+        <p className="mt-3 text-sm font-medium">No patients found</p>
+        <p className="mt-1 text-xs text-muted-foreground">Add your first patient to get started.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+    <div className="rounded-xl border bg-card text-card-foreground shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
@@ -60,19 +65,27 @@ export function PatientTable({ patients }: PatientTableProps) {
         <TableBody>
           {patients.map((p) => (
             <TableRow key={p.id}>
-              <TableCell className="font-medium">{p.fullName}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <span className="font-medium">{p.fullName}</span>
+                </div>
+              </TableCell>
               <TableCell className="capitalize">{p.gender.replace("_", " ")}</TableCell>
               <TableCell>
                 <Badge variant={statusVariant(p.status)}>{p.status}</Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="text-muted-foreground">
                 {new Date(p.createdAt).toLocaleDateString("en-US")}
               </TableCell>
               <TableCell className="text-right">
                 <Link
                   href={`/patients/${p.id}`}
-                  className="text-sm text-primary underline-offset-4 hover:underline"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
                 >
+                  <Eye className="h-3.5 w-3.5" />
                   View
                 </Link>
               </TableCell>
