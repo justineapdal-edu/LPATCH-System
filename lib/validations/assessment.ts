@@ -46,47 +46,35 @@ const medicalHistorySchema = z.object({
 // ── Page 1: Physical Examination ────────────────────────────────
 
 const physicalExaminationSchema = z.object({
-  posture: z.string().min(1, "Posture assessment is required"),
-  gait: z.string().min(1, "Gait assessment is required"),
-  rangeOfMotion: z.string().min(1, "Range of motion is required"),
-  muscleStrength: z
-    .string()
-    .min(1, "Muscle strength assessment is required"),
-  jointIntegrity: z
-    .string()
-    .min(1, "Joint integrity assessment is required"),
-  neurologicalScreening: z
-    .string()
-    .min(1, "Neurological screening is required"),
+  posture: z.string().optional(),
+  gait: z.string().optional(),
+  rangeOfMotion: z.string().optional(),
+  muscleStrength: z.string().optional(),
+  jointIntegrity: z.string().optional(),
+  neurologicalScreening: z.string().optional(),
   specialTests: z.string().optional(),
 });
 
 // ── Page 1: Presenting Complaint ────────────────────────────────
 
 const presentingComplaintSchema = z.object({
-  description: z.string().min(1, "Symptom description is required"),
-  onsetDuration: z.string().min(1, "Onset and duration is required"),
-  aggravatingRelievingFactors: z
-    .string()
-    .min(1, "Aggravating/relieving factors are required"),
+  description: z.string().optional(),
+  onsetDuration: z.string().optional(),
+  aggravatingRelievingFactors: z.string().optional(),
   painScale: z
     .number()
     .int()
     .min(0, "Pain scale must be 0 or greater")
     .max(10, "Pain scale must be 10 or less"),
-  functionalLimitations: z
-    .string()
-    .min(1, "Functional limitations are required"),
+  functionalLimitations: z.string().optional(),
 });
 
 // ── Page 1: Functional Assessment ───────────────────────────────
 
 const functionalAssessmentSchema = z.object({
-  adls: z.string().min(1, "ADL assessment is required"),
-  mobilityStatus: z.string().min(1, "Mobility status is required"),
-  balanceCoordination: z
-    .string()
-    .min(1, "Balance/coordination assessment is required"),
+  adls: z.string().optional(),
+  mobilityStatus: z.string().optional(),
+  balanceCoordination: z.string().optional(),
   assistiveDevices: z.string().optional(),
   workLimitations: z.string().optional(),
 });
@@ -94,10 +82,10 @@ const functionalAssessmentSchema = z.object({
 // ── Page 2: Assessment Summary ──────────────────────────────────
 
 const assessmentSummarySchema = z.object({
-  clinicalImpression: z.string().min(1, "Clinical impression is required"),
-  ptDiagnosis: z.string().min(1, "PT diagnosis is required"),
-  prognosis: z.string().min(1, "Prognosis is required"),
-  goals: z.string().min(1, "Treatment goals are required"),
+  clinicalImpression: z.string().optional(),
+  ptDiagnosis: z.string().optional(),
+  prognosis: z.string().optional(),
+  goals: z.string().optional(),
 });
 
 // ── Page 2: Treatment Plan (Frequency & Duration) ───────────────
@@ -119,19 +107,15 @@ const frequencyDurationSchema = z.object({
     ["morning", "afternoon", "evening", "any"],
     { message: "Preferred time of day is required" }
   ),
-  startDate: z.string().min(1, "Start date is required"),
+  startDate: z.string().optional(),
 });
 
 const treatmentPlanSchema = z.object({
   frequencyDuration: frequencyDurationSchema,
   modalities: z.string().optional(),
-  therapeuticExercises: z
-    .string()
-    .min(1, "Therapeutic exercises are required"),
+  therapeuticExercises: z.string().optional(),
   manualTherapy: z.string().optional(),
-  homeExerciseProgram: z
-    .string()
-    .min(1, "Home exercise program is required"),
+  homeExerciseProgram: z.string().optional(),
   educationCounseling: z.string().optional(),
 });
 
@@ -140,19 +124,19 @@ const treatmentPlanSchema = z.object({
 const therapistNotesSchema = z.object({
   initialResponse: z.string().optional(),
   recommendations: z.string().optional(),
-  followUpDate: z.string().min(1, "Follow-up date is required"),
+  followUpDate: z.string().optional(),
 });
 
 // ── Page 2: Therapist on Duty ───────────────────────────────────
 
 const therapistOnDutySchema = z.object({
-  name: z.string().min(1, "Therapist name is required"),
-  licenseNumber: z.string().min(1, "License number is required"),
-  date: z.string().min(1, "Date is required"),
+  name: z.string().optional(),
+  licenseNumber: z.string().optional(),
+  date: z.string().optional(),
   signatureBase64: z
     .string()
-    .min(1, "Signature is required")
-    .refine((val) => val.startsWith("data:image/png;base64,"), {
+    .optional()
+    .refine((val) => !val || val.startsWith("data:image/png;base64,"), {
       message: "Signature must be a valid PNG image",
     }),
 });
@@ -174,23 +158,18 @@ export const assessmentSchema = z.object({
 
 export type AssessmentInput = z.infer<typeof assessmentSchema>;
 
-// ── Individual page schemas for step-by-step validation ─────────
+// ── Per-step schemas for step-by-step validation ──────────────
 
-export const page1Schema = z.object({
-  patientInformation: patientInformationSchema,
-  medicalHistory: medicalHistorySchema,
-  physicalExamination: physicalExaminationSchema,
-  presentingComplaint: presentingComplaintSchema,
-  functionalAssessment: functionalAssessmentSchema,
-});
-
-export const page2Schema = z.object({
-  assessmentSummary: assessmentSummarySchema,
-  treatmentPlan: treatmentPlanSchema,
-  therapistNotes: therapistNotesSchema,
-  therapistOnDuty: therapistOnDutySchema,
-  notes: z.string().max(5000).optional(),
-});
-
-export type Page1Input = z.infer<typeof page1Schema>;
-export type Page2Input = z.infer<typeof page2Schema>;
+export const stepSchemas: Record<number, z.ZodType> = {
+  1: z.object({ patientInformation: patientInformationSchema }),
+  2: z.object({ medicalHistory: medicalHistorySchema }),
+  3: z.object({ physicalExamination: physicalExaminationSchema }),
+  4: z.object({ presentingComplaint: presentingComplaintSchema }),
+  5: z.object({ functionalAssessment: functionalAssessmentSchema }),
+  6: z.object({ assessmentSummary: assessmentSummarySchema }),
+  7: z.object({ treatmentPlan: treatmentPlanSchema }),
+  8: z.object({
+    therapistNotes: therapistNotesSchema,
+    therapistOnDuty: therapistOnDutySchema,
+  }),
+};

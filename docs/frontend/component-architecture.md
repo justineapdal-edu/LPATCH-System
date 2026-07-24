@@ -1,6 +1,6 @@
 # Component Architecture
 
-> Rules for Next.js App Router layout, Server vs Client components, Shadcn/Tailwind conventions, assessment form components, and session scheduler UI.
+> Rules for Next.js App Router layout, Server vs Client components, Shadcn/Tailwind v4 conventions, assessment form components, and session scheduler UI.
 
 ---
 
@@ -10,41 +10,167 @@
 
 ```typescript
 // Server Component (default)
-// Wraps ALL pages with shared providers and shell
+// Configures HTML document, Google Fonts, and wraps ALL pages with AppShell
+
+import { Geist, Geist_Mono } from "next/font/google";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">
-        <AppShell>
-          {children}
-        </AppShell>
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="h-full flex flex-col">
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
 }
 ```
 
+### Height Chain (Full-Viewport Sidebar)
+
+The layout uses a strict `h-full` chain to keep the sidebar at viewport height:
+
+```
+html[h-full]
+  └─ body[h-full flex flex-col]
+       └─ AppShell div[h-full flex]
+            ├─ aside[h-full]         ← desktop sidebar (fixed width w-64)
+            └─ main content div[flex-1 overflow-hidden]
+                 ├─ header[h-16]
+                 └─ main[flex-1 overflow-auto]  ← scrollable page content
+```
+
+**Rule:** Never use `min-h-full` on `body` — it allows the layout to grow past the viewport, breaking the sidebar's full-height behavior.
+
 ### AppShell Component
 
 ```typescript
 // components/layout/app-shell.tsx
-// Client Component — handles sidebar state, mobile menu
+// Client Component — handles sidebar state, mobile menu, responsive layout
 
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { LayoutDashboard, Users, Calendar, Menu, Activity, LogOut } from "lucide-react";
+
+const navItems = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/patients", label: "Patients", icon: Users },
+  { href: "/schedule", label: "Schedule", icon: Calendar },
+] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-full">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <main className="flex-1 overflow-auto">
-        <Navbar onMenuClick={() => setSidebarOpen(true)} />
-        <div className="p-6">{children}</div>
-      </main>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r">
+        <SidebarNav />
+      </aside>
+
+      {/* Mobile sidebar — Sheet drawer from left */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetContent side="left" className="w-64 p-0">
+          <SidebarNav onLinkClick={() => setSidebarOpen(false)} />
+        </SheetContent>
+      </Sheet>
+
+      {/* Main content area */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <header className="flex h-16 items-center gap-4 border-b bg-card/80 backdrop-blur-sm px-4 lg:px-6">
+          {/* Mobile menu trigger */}
+          <button
+            type="button"
+            className="rounded-lg p-2 text-muted-foreground hover:bg-muted lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex-1" />
+          {/* User avatar */}
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+            A
+          </div>
+        </header>
+        <main className="flex-1 overflow-auto p-4 lg:p-6">{children}</main>
+      </div>
+    </div>
+  );
+}
+```
+
+### SidebarNav (Internal Component)
+
+```typescript
+// Rendered inside both desktop <aside> and mobile <Sheet>
+// Uses bg-card for sidebar background, flex h-full flex-col for full height
+
+function SidebarNav({ onLinkClick }: { onLinkClick?: () => void }) {
+  const pathname = usePathname();
+
+  return (
+    <div className="flex h-full flex-col bg-card">
+      {/* Logo header — h-16, border-b */}
+      <div className="flex h-16 items-center gap-2.5 border-b px-5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+          <Activity className="h-4 w-4 text-primary-foreground" />
+        </div>
+        <span className="text-lg font-bold tracking-tight">LPATCH</span>
+      </div>
+
+      {/* Nav links — flex-1 pushes user section to bottom */}
+      <nav className="flex-1 space-y-1 p-3">
+        {navItems.map((item) => {
+          const isActive = pathname.startsWith(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onLinkClick}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                isActive
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* User section — pinned to bottom via parent flex-col */}
+      <div className="border-t p-3">
+        <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted-foreground">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium">
+            A
+          </div>
+          <div className="flex-1">
+            <p className="font-medium text-foreground">Admin</p>
+            <p className="text-xs">Therapist</p>
+          </div>
+          <LogOut className="h-4 w-4" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -114,7 +240,7 @@ export default async function PatientProfilePage({
 
 ```
 /app
-├── layout.tsx                    Root layout (AppShell)
+├── layout.tsx                    Root layout (AppShell + Google Fonts)
 ├── page.tsx                      Redirect → /dashboard
 │
 ├── dashboard/
@@ -155,7 +281,222 @@ export default async function PatientProfilePage({
 
 ---
 
-## 4. Assessment Form Component Tree
+## 4. Theme & Design System
+
+This project uses **Tailwind CSS v4** with a **CSS-based configuration** (no `tailwind.config.js`). All theme tokens are defined as CSS custom properties in `app/globals.css`.
+
+### Color System (oklch)
+
+All colors use the oklch color space for perceptual uniformity. The theme defines light and dark mode via `:root` and `.dark` selectors.
+
+```css
+/* Light mode — :root */
+--background: oklch(0.985 0.002 240);    /* Near-white with slight blue tint */
+--foreground: oklch(0.17 0.04 250);      /* Dark navy text */
+--primary: oklch(0.52 0.14 180);         /* Teal/cyan primary accent */
+--card: oklch(1 0 0);                     /* Pure white cards */
+--muted: oklch(0.96 0.008 240);          /* Light gray backgrounds */
+--accent: oklch(0.93 0.02 180);          /* Light teal for hover states */
+--destructive: oklch(0.577 0.245 27.325); /* Red for errors/destructive */
+--border: oklch(0.91 0.01 240);          /* Subtle light borders */
+
+/* Dark mode — .dark */
+--background: oklch(0.16 0.03 250);      /* Dark navy background */
+--foreground: oklch(0.96 0.008 240);     /* Near-white text */
+--primary: oklch(0.60 0.14 180);         /* Brighter teal for dark mode */
+--card: oklch(0.20 0.03 250);            /* Dark card surfaces */
+--border: oklch(1 0 0 / 10%);            /* White with 10% opacity */
+```
+
+### Sidebar-Specific Tokens
+
+The sidebar has its own set of theme tokens for independent styling:
+
+```css
+:root {
+  --sidebar: oklch(0.985 0.002 240);
+  --sidebar-foreground: oklch(0.17 0.04 250);
+  --sidebar-primary: oklch(0.52 0.14 180);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0.02 180);
+  --sidebar-accent-foreground: oklch(0.30 0.06 250);
+  --sidebar-border: oklch(0.91 0.01 240);
+  --sidebar-ring: oklch(0.52 0.14 180);
+}
+```
+
+### CSS Variable → Tailwind Mapping
+
+In Tailwind v4, theme tokens are mapped via `@theme inline` in `globals.css`:
+
+```css
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  /* ... etc */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+```
+
+### Base Layer Styles
+
+```css
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+```
+
+### Theme Rules
+
+| Rule | Detail |
+|------|--------|
+| **Use theme tokens only** | `bg-primary`, `text-muted-foreground` — NEVER `bg-blue-500` or hardcoded oklch values |
+| **Light/dark via CSS vars** | All colors defined as CSS variables; dark mode toggled via `.dark` class on `<html>` |
+| **Sidebar tokens** | Use `--sidebar-*` tokens for sidebar-specific styling, not general `--primary` |
+| **Border radius** | Base radius is `0.625rem`; use `rounded-lg` (maps to `--radius-lg`) for standard rounding |
+| **Font stack** | Geist Sans (`--font-geist-sans`) as primary, Geist Mono (`--font-geist-mono`) for code |
+
+---
+
+## 5. UI Primitives (Shadcn + @base-ui/react)
+
+This project uses **Shadcn v4** components built on **@base-ui/react** (NOT Radix UI).
+
+### Shadcn Component Installation
+
+```bash
+npx shadcn@latest add button
+npx shadcn@latest add input
+npx shadcn@latest add dialog
+npx shadcn@latest add table
+npx shadcn@latest add card
+npx shadcn@latest add badge
+npx shadcn@latest add select
+npx shadcn@latest add tabs
+npx shadcn@latest add skeleton
+npx shadcn@latest add form
+npx shadcn@latest add label
+npx shadcn@latest add separator
+npx shadcn@latest add dropdown-menu
+npx shadcn@latest add sheet
+npx shadcn@latest add checkbox
+npx shadcn@latest add radio-group
+npx shadcn@latest add slider
+npx shadcn@latest add calendar
+npx shadcn@latest add popover
+npx shadcn@latest add textarea
+```
+
+### Installed UI Components (`components/ui/`)
+
+| Component | File | Primitives Used |
+|-----------|------|-----------------|
+| Button | `button.tsx` | `@base-ui/react/button` + `cva` |
+| Badge | `badge.tsx` | `@base-ui/react/merge-props` + `@base-ui/react/use-render` + `cva` |
+| Card | `card.tsx` | React.forwardRef (standard) |
+| Sheet | `sheet.tsx` | `@base-ui/react/dialog` (NOT Radix Sheet) |
+| Input | `input.tsx` | Standard `<input>` |
+| Textarea | `textarea.tsx` | Standard `<textarea>` |
+| Select | `select.tsx` | `@base-ui/react/select` |
+| Dialog | `dialog.tsx` | `@base-ui/react/dialog` |
+| Tabs | `tabs.tsx` | `@base-ui/react/tabs` |
+| Checkbox | `checkbox.tsx` | `@base-ui/react/checkbox` |
+| Radio Group | `radio-group.tsx` | `@base-ui/react/radio` |
+| Slider | `slider.tsx` | `@base-ui/react/slider` |
+| Calendar | `calendar.tsx` | `react-day-picker` |
+| Popover | `popover.tsx` | `@base-ui/react/popover` |
+| Dropdown Menu | `dropdown-menu.tsx` | `@base-ui/react/menu` |
+| Label | `label.tsx` | `@base-ui/react/field` |
+| Separator | `separator.tsx` | Standard `<div>` with border |
+| Skeleton | `skeleton.tsx` | Standard `<div>` with animation |
+
+### Additional NPM Packages
+
+```bash
+npm install signature_pad    # Canvas-based signature capture
+npm install date-fns         # Date utilities
+npm install zod              # Schema validation (v4)
+```
+
+### Button Variants Reference
+
+```typescript
+// From components/ui/button.tsx — cva-based variants
+const buttonVariants = {
+  variant: {
+    default:    "bg-primary text-primary-foreground hover:bg-primary/80",
+    outline:    "border-border bg-background hover:bg-muted hover:text-foreground",
+    secondary:  "bg-secondary text-secondary-foreground hover:bg-secondary/...",
+    ghost:      "hover:bg-muted hover:text-foreground",
+    destructive: "bg-destructive/10 text-destructive hover:bg-destructive/20",
+    link:       "text-primary underline-offset-4 hover:underline",
+  },
+  size: {
+    default: "h-8 gap-1.5 px-2.5",
+    xs:      "h-6 gap-1 ...",
+    sm:      "h-7 gap-1 ...",
+    lg:      "h-9 gap-1.5 px-2.5",
+    icon:    "size-8",
+    // ... icon-xs, icon-sm, icon-lg
+  },
+};
+```
+
+### Card API
+
+```typescript
+import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter } from "@/components/ui/card";
+
+<Card>
+  <CardHeader>
+    <CardTitle>Title</CardTitle>
+    <CardDescription>Description</CardDescription>
+    <CardAction>...</CardAction>
+  </CardHeader>
+  <CardContent>...</CardContent>
+  <CardFooter>...</CardFooter>
+</Card>
+```
+
+### Tailwind Rules
+
+| Rule | Example |
+|------|---------|
+| **Use theme tokens only** | `bg-primary`, `text-muted-foreground` — NEVER `bg-blue-500` |
+| **Use `cn()` for merging** | `cn("base-class", conditional && "conditional-class", className)` |
+| **Consistent spacing** | Use Tailwind spacing scale: `p-4`, `gap-6`, `space-y-4` |
+| **Responsive prefixes** | `md:grid-cols-2`, `lg:grid-cols-4` |
+| **Card spacing CSS var** | Cards use `--card-spacing` for internal padding consistency |
+
+---
+
+## 6. Assessment Form Component Tree
 
 The assessment form is a **multi-step wizard** with Client Component state management.
 
@@ -239,7 +580,6 @@ export function AssessmentWizard({ patientId }: { patientId?: string }) {
   }
 
   function handleSubmit() {
-    // Full schema validation before submission
     const result = assessmentSchema.safeParse(formData);
     if (!result.success) {
       // Map Zod errors to field-level errors
@@ -267,7 +607,7 @@ export function AssessmentWizard({ patientId }: { patientId?: string }) {
 
 ---
 
-## 5. Session Scheduler Component
+## 7. Session Scheduler Component
 
 ### Component Tree
 
@@ -362,10 +702,9 @@ export function SessionPreview({ sessions, assignedTherapistId }: SessionPreview
   const totalHours = Math.floor(totalMinutes / 60);
   const remainingMin = totalMinutes % 60;
 
-  // Group sessions by week
   const weekMap = new Map<number, typeof sessions>();
   sessions.forEach((s) => {
-    const weekNum = Math.ceil(s.sessionNumber / 3); // Adjust based on frequency
+    const weekNum = Math.ceil(s.sessionNumber / 3);
     const weekSessions = weekMap.get(weekNum) ?? [];
     weekSessions.push(s);
     weekMap.set(weekNum, weekSessions);
@@ -400,51 +739,7 @@ export function SessionPreview({ sessions, assignedTherapistId }: SessionPreview
 
 ---
 
-## 6. Shadcn UI / Tailwind Design System
-
-### Shadcn Component Installation
-
-```bash
-npx shadcn@latest add button
-npx shadcn@latest add input
-npx shadcn@latest add dialog
-npx shadcn@latest add table
-npx shadcn@latest add card
-npx shadcn@latest add badge
-npx shadcn@latest add select
-npx shadcn@latest add tabs
-npx shadcn@latest add skeleton
-npx shadcn@latest add form
-npx shadcn@latest add label
-npx shadcn@latest add separator
-npx shadcn@latest add dropdown-menu
-npx shadcn@latest add sheet
-npx shadcn@latest add checkbox
-npx shadcn@latest add radio-group
-npx shadcn@latest add slider
-npx shadcn@latest add calendar
-npx shadcn@latest add popover
-npx shadcn@latest add textarea
-```
-
-### Additional NPM Packages
-```bash
-npm install signature_pad    # Canvas-based signature capture
-```
-
-### Tailwind Rules
-
-| Rule | Example |
-|------|---------|
-| **Use theme tokens only** | `bg-primary`, `text-muted-foreground` — NEVER `bg-blue-500` |
-| **Use `cn()` for merging** | `cn("base-class", conditional && "conditional-class", className)` |
-| **Consistent spacing** | Use Tailwind spacing scale: `p-4`, `gap-6`, `space-y-4` |
-| **Responsive prefixes** | `md:grid-cols-2`, `lg:grid-cols-4` |
-| **Dark mode via CSS vars** | All colors defined as CSS variables in `globals.css` |
-
----
-
-## 7. TypeScript Prop Typing Standards
+## 8. TypeScript Prop Typing Standards
 
 ### Component Props Convention
 
@@ -501,7 +796,7 @@ export function useSessionPreview(fd: FrequencyDuration) {
 
 ---
 
-## 8. File Naming Conventions
+## 9. File Naming Conventions
 
 | Pattern | Example |
 |---------|---------|
@@ -529,7 +824,7 @@ export default function formatDate(date: string): string { /* ... */ }
 
 ---
 
-## 9. Component Size Guidelines
+## 10. Component Size Guidelines
 
 | Component Type | Max Lines | Rationale |
 |----------------|-----------|-----------|
@@ -545,3 +840,82 @@ export default function formatDate(date: string): string { /* ... */ }
 - Component manages > 3 pieces of state → extract custom hook
 - Component has > 3 conditional renders → extract sub-components
 - Form has > 10 fields → extract field groups into sub-components
+
+---
+
+## 11. Icon System
+
+This project uses **lucide-react** for all icons.
+
+```typescript
+import { LayoutDashboard, Users, Calendar, Activity, LogOut } from "lucide-react";
+
+// Standard icon size in components: h-4 w-4 (16px)
+<Activity className="h-4 w-4" />
+
+// Larger icons for page headers: h-5 w-5 (20px)
+<Menu className="h-5 w-5" />
+```
+
+### Icon Usage Patterns
+
+| Context | Size | Example |
+|---------|------|---------|
+| Sidebar nav links | `h-4 w-4` | `<Icon className="h-4 w-4" />` |
+| Page header icons | `h-5 w-5` | `<Menu className="h-5 w-5" />` |
+| KPI card icons | `h-4 w-4` (in container) | Wrapped in `h-8 w-8` or `h-10 w-10` div |
+| Schedule day icons | `h-3 w-3` | `<Clock className="h-3 w-3" />` |
+| Avatar fallback | N/A | Letter in `h-8 w-8` circle |
+
+---
+
+## 12. Component Directory Structure
+
+```
+components/
+├── ui/                          Shadcn UI primitives (DO NOT modify directly)
+│   ├── button.tsx
+│   ├── card.tsx
+│   ├── badge.tsx
+│   ├── sheet.tsx
+│   ├── input.tsx
+│   ├── textarea.tsx
+│   ├── select.tsx
+│   ├── dialog.tsx
+│   ├── tabs.tsx
+│   ├── checkbox.tsx
+│   ├── radio-group.tsx
+│   ├── slider.tsx
+│   ├── calendar.tsx
+│   ├── popover.tsx
+│   ├── dropdown-menu.tsx
+│   ├── label.tsx
+│   ├── separator.tsx
+│   ├── skeleton.tsx
+│   └── table.tsx
+├── layout/                      App shell and navigation
+│   └── app-shell.tsx            Sidebar + main content layout
+├── dashboard/                   Dashboard page components
+│   ├── kpi-card.tsx
+│   ├── daily-schedule.tsx
+│   └── activity-feed.tsx
+├── patients/                    Patient-related components
+│   ├── patient-table.tsx
+│   └── patient-header.tsx
+├── assessments/                 Assessment wizard and steps
+│   ├── assessment-wizard.tsx
+│   ├── assessment-view.tsx
+│   ├── signature-pad.tsx
+│   └── steps/
+│       ├── patient-info-step.tsx
+│       ├── medical-history-step.tsx
+│       ├── physical-exam-step.tsx
+│       ├── presenting-complaint-step.tsx
+│       ├── functional-assessment-step.tsx
+│       ├── assessment-summary-step.tsx
+│       ├── treatment-plan-step.tsx
+│       └── therapist-notes-step.tsx
+└── schedule/                    Scheduling components
+    ├── session-scheduler.tsx
+    └── session-preview.tsx
+```

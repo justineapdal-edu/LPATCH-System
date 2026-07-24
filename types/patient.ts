@@ -67,31 +67,31 @@ export interface MedicalHistory {
 // ── Physical Examination ────────────────────────────────────────
 
 export interface PhysicalExamination {
-  posture: string;
-  gait: string;
-  rangeOfMotion: string;
-  muscleStrength: string;
-  jointIntegrity: string;
-  neurologicalScreening: string;
+  posture?: string;
+  gait?: string;
+  rangeOfMotion?: string;
+  muscleStrength?: string;
+  jointIntegrity?: string;
+  neurologicalScreening?: string;
   specialTests?: string;
 }
 
 // ── Presenting Complaint ────────────────────────────────────────
 
 export interface PresentingComplaint {
-  description: string;
-  onsetDuration: string;
-  aggravatingRelievingFactors: string;
+  description?: string;
+  onsetDuration?: string;
+  aggravatingRelievingFactors?: string;
   painScale: number;
-  functionalLimitations: string;
+  functionalLimitations?: string;
 }
 
 // ── Functional Assessment ───────────────────────────────────────
 
 export interface FunctionalAssessment {
-  adls: string;
-  mobilityStatus: string;
-  balanceCoordination: string;
+  adls?: string;
+  mobilityStatus?: string;
+  balanceCoordination?: string;
   assistiveDevices?: string;
   workLimitations?: string;
 }
@@ -99,10 +99,10 @@ export interface FunctionalAssessment {
 // ── Assessment Summary ──────────────────────────────────────────
 
 export interface AssessmentSummary {
-  clinicalImpression: string;
-  ptDiagnosis: string;
-  prognosis: string;
-  goals: string;
+  clinicalImpression?: string;
+  ptDiagnosis?: string;
+  prognosis?: string;
+  goals?: string;
 }
 
 // ── Treatment Plan ──────────────────────────────────────────────
@@ -133,15 +133,15 @@ export interface FrequencyDuration {
   durationMinutes: number;
   totalWeeks: number;
   preferredTimeOfDay: "morning" | "afternoon" | "evening" | "any";
-  startDate: string;
+  startDate?: string;
 }
 
 export interface TreatmentPlan {
   frequencyDuration: FrequencyDuration;
   modalities?: string;
-  therapeuticExercises: string;
+  therapeuticExercises?: string;
   manualTherapy?: string;
-  homeExerciseProgram: string;
+  homeExerciseProgram?: string;
   educationCounseling?: string;
 }
 
@@ -150,16 +150,16 @@ export interface TreatmentPlan {
 export interface TherapistNotes {
   initialResponse?: string;
   recommendations?: string;
-  followUpDate: string;
+  followUpDate?: string;
 }
 
 // ── Therapist on Duty ───────────────────────────────────────────
 
 export interface TherapistOnDuty {
-  name: string;
-  licenseNumber: string;
-  date: string;
-  signatureBase64: string;
+  name?: string;
+  licenseNumber?: string;
+  date?: string;
+  signatureBase64?: string;
 }
 
 // ── Root Assessment ─────────────────────────────────────────────

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { page1Schema, page2Schema, assessmentSchema } from "@/lib/validations/assessment";
+import { stepSchemas, assessmentSchema } from "@/lib/validations/assessment";
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import {
   createNewPatientAssessment,
@@ -145,6 +145,7 @@ export function AssessmentWizard({
 }: AssessmentWizardProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, startTransition] = useTransition();
   const [formData, setFormData] = useState<AssessmentInput>(() => {
     const data = emptyFormData();
     if (existingPatient) {
@@ -189,12 +190,9 @@ export function AssessmentWizard({
 
   function validateStep(step: number): boolean {
     setErrors({});
-    let result;
-    if (step <= 5) {
-      result = page1Schema.safeParse(formData);
-    } else {
-      result = page2Schema.safeParse(formData);
-    }
+    const schema = stepSchemas[step];
+    if (!schema) return true;
+    const result = schema.safeParse(formData);
     if (!result.success) {
       const newErrors: Record<string, string> = {};
       result.error.issues.forEach((issue) => {
@@ -226,7 +224,9 @@ export function AssessmentWizard({
       setErrors(newErrors);
       return;
     }
-    formAction(result.data);
+    startTransition(async () => {
+      await formAction(result.data);
+    });
   }
 
   if (state?.success === true && "patientId" in state) {

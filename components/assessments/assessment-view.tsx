@@ -166,7 +166,7 @@ function Section({
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
     <p className="text-sm">

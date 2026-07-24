@@ -49,7 +49,7 @@ function getPreferredHour(
 export function generateSessions(fd: FrequencyDuration): GeneratedSession[] {
   const sessions: GeneratedSession[] = [];
   const sessionsPerWeek = getSessionsPerWeek(fd.frequency);
-  const startDate = new Date(fd.startDate);
+  const startDate = new Date(fd.startDate ?? new Date().toISOString().split("T")[0]);
   const preferredDays = getPreferredDayIndices(fd.frequency);
   const preferredHour = getPreferredHour(fd.preferredTimeOfDay);
 

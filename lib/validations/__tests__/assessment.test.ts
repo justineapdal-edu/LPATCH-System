@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { assessmentSchema, page1Schema, page2Schema } from "../assessment";
+import { assessmentSchema, stepSchemas } from "../assessment";
 
 describe("assessmentSchema", () => {
   const validData = {
@@ -151,9 +151,9 @@ describe("assessmentSchema", () => {
   });
 });
 
-describe("page1Schema", () => {
-  it("validates page 1 fields only", () => {
-    const result = page1Schema.safeParse({
+describe("stepSchemas", () => {
+  it("step 1 validates patientInformation only", () => {
+    const result = stepSchemas[1].safeParse({
       patientInformation: {
         fullName: "John",
         address: "123 Main",
@@ -165,6 +165,29 @@ describe("page1Schema", () => {
         emergencyContactName: "Jane",
         emergencyContactPhone: "555-5678",
       },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("step 1 rejects empty patientInformation fields", () => {
+    const result = stepSchemas[1].safeParse({
+      patientInformation: {
+        fullName: "",
+        address: "123 Main",
+        dateOfBirth: "1990-01-01",
+        gender: "male",
+        contactNumber: "555-1234",
+        email: "",
+        dateOfAssessment: "2026-01-15",
+        emergencyContactName: "Jane",
+        emergencyContactPhone: "555-5678",
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("step 2 validates medicalHistory only", () => {
+    const result = stepSchemas[2].safeParse({
       medicalHistory: {
         hypertension: false,
         diabetes: false,
@@ -173,25 +196,35 @@ describe("page1Schema", () => {
         neurologicalDisorders: false,
         musculoskeletalInjuries: false,
       },
-      physicalExamination: {
-        posture: "Normal",
-        gait: "Normal",
-        rangeOfMotion: "Full",
-        muscleStrength: "5/5",
-        jointIntegrity: "Stable",
-        neurologicalScreening: "Intact",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("step 6 validates assessmentSummary only", () => {
+    const result = stepSchemas[6].safeParse({
+      assessmentSummary: {
+        clinicalImpression: "Left knee osteoarthritis",
+        ptDiagnosis: "Knee OA",
+        prognosis: "Good",
+        goals: "Reduce pain, improve ROM",
       },
-      presentingComplaint: {
-        description: "Pain",
-        onsetDuration: "1 week",
-        aggravatingRelievingFactors: "Activity",
-        painScale: 5,
-        functionalLimitations: "Walking",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("step 8 validates therapistNotes and therapistOnDuty", () => {
+    const result = stepSchemas[8].safeParse({
+      therapistNotes: {
+        initialResponse: "",
+        recommendations: "",
+        followUpDate: "2026-02-15",
       },
-      functionalAssessment: {
-        adls: "Independent",
-        mobilityStatus: "Ambulatory",
-        balanceCoordination: "Normal",
+      therapistOnDuty: {
+        name: "Dr. Juan dela Cruz",
+        licenseNumber: "PT-2024-00123",
+        date: "2026-01-15",
+        signatureBase64:
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
       },
     });
     expect(result.success).toBe(true);

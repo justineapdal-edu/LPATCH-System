@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import SignaturePad from "signature_pad";
 
 interface SignaturePadProps {
-  value: string;
+  value?: string;
   onChange: (value: string) => void;
   error?: string;
 }
